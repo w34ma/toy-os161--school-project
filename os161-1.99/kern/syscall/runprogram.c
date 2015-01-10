@@ -44,7 +44,8 @@
 #include <vfs.h>
 #include <syscall.h>
 #include <test.h>
-
+#include "opt-A2.h"
+#include <copyinout.h>
 /*
  * Load program "progname" and start running it in usermode.
  * Does not return except on error.
@@ -52,7 +53,7 @@
  * Calls vfs_open on progname and thus may destroy it.
  */
 int
-runprogram(char *progname)
+runprogram(char *progname , unsigned long argc , char** args)
 {
 	struct addrspace *as;
 	struct vnode *v;
@@ -64,7 +65,6 @@ runprogram(char *progname)
 	if (result) {
 		return result;
 	}
-
 	/* We should be a new process. */
 	KASSERT(curproc_getas() == NULL);
 
@@ -74,11 +74,9 @@ runprogram(char *progname)
 		vfs_close(v);
 		return ENOMEM;
 	}
-
 	/* Switch to it and activate it. */
 	curproc_setas(as);
 	as_activate();
-
 	/* Load the executable. */
 	result = load_elf(v, &entrypoint);
 	if (result) {
@@ -86,21 +84,43 @@ runprogram(char *progname)
 		vfs_close(v);
 		return result;
 	}
-
 	/* Done with the file now. */
 	vfs_close(v);
 
 	/* Define the user stack in the address space */
-	result = as_define_stack(as, &stackptr);
+   //kprintf("begin to create stack for the process\n");
+   result = as_define_stack(as, &stackptr);
 	if (result) {
 		/* p_addrspace will go away when curproc is destroyed */
 		return result;
 	}
-
 	/* Warp to user mode. */
+#if OPT_A2
+    /*copy the arguments from kernel buffer into user stack*/
+    char** argv = kmalloc((argc+1)*sizeof(char*));
+    argv[argc]= NULL;
+    size_t topstack = stackptr;
+    int count = 0;
+    for(int m = argc - 1 ; m >= 0; m--){
+        int len = strlen(args[m])+1;
+        count = count + len;
+        stackptr = stackptr - len;
+        argv[m]=(char *)stackptr;
+        copyoutstr(args[m],(userptr_t)stackptr,(size_t)len,NULL);
+    }
+    //round up
+    stackptr = topstack - count - ((topstack - count) % 8);
+    //continue to copy pointer to user stack
+    for(int n = argc;n>=0;n--){
+        stackptr = stackptr - 4;
+        copyout(&argv[n],(userptr_t)stackptr,(size_t)4);
+    }
+    kfree(argv);
+    enter_new_process(argc,(userptr_t) stackptr,stackptr,entrypoint);
+#else
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
 			  stackptr, entrypoint);
-	
+#endif
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;

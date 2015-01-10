@@ -762,7 +762,9 @@ thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
 #endif
 
 	/* Call the function. */
-	entrypoint(data1, data2);
+   entrypoint(data1, data2);
+
+   proc_remthread(curthread);
 
 	/* Done. */
 	thread_exit();

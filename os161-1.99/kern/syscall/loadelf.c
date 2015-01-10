@@ -60,6 +60,13 @@
 #include <vnode.h>
 #include <elf.h>
 
+#include "opt-A3.h"
+#include <spl.h>
+#include <spinlock.h>
+#include <mips/tlb.h>
+#include <vm.h>
+
+
 /*
  * Load a segment at virtual address VADDR. The segment in memory
  * extends from VADDR up to (but not including) VADDR+MEMSIZE. The
@@ -302,6 +309,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 	}
 
 	*entrypoint = eh.e_entry;
-
-	return 0;
+    as->loaded = 1;
+	 as_activate();
+    return 0;
 }

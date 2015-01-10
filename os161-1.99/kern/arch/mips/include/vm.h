@@ -27,8 +27,18 @@
  * SUCH DAMAGE.
  */
 
+#include "opt-A3.h"
+
 #ifndef _MIPS_VM_H_
 #define _MIPS_VM_H_
+
+#if OPT_A3
+struct core {
+    int valid; //to see whether the frame is useable
+    int contiguous; //keep track of contiguous memory
+    paddr_t paddr;
+};
+#endif
 
 
 /*
@@ -66,7 +76,7 @@
  * a valid address, and will make a *huge* mess if you scribble on it.
  */
 #define PADDR_TO_KVADDR(paddr) ((paddr)+MIPS_KSEG0)
-
+#define KVADDR_TO_PADDR(vaddr) ((vaddr)-MIPS_KSEG0)
 /*
  * The top of user space. (Actually, the address immediately above the
  * last valid user address.)

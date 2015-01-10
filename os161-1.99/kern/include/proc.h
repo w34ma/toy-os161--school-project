@@ -38,6 +38,7 @@
 
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
+#include "opt-A2.h"
 
 struct addrspace;
 struct vnode;
@@ -48,27 +49,41 @@ struct semaphore;
 /*
  * Process structure.
  */
+
+struct proc_table{
+   struct proc *p;
+   struct cv *pid_cv;
+   int exit_code;
+};
+
 struct proc {
-	char *p_name;			/* Name of this process */
-	struct spinlock p_lock;		/* Lock for this structure */
-	struct threadarray p_threads;	/* Threads in this process */
+   char *p_name;			/* Name of this process */
+   struct spinlock p_lock;		/* Lock for this structure */
+   struct threadarray p_threads;	/* Threads in this process */
 
-	/* VM */
-	struct addrspace *p_addrspace;	/* virtual address space */
+   /* VM */
+   struct addrspace *p_addrspace;	/* virtual address space */
 
-	/* VFS */
-	struct vnode *p_cwd;		/* current working directory */
+   /* VFS */
+   struct vnode *p_cwd;		/* current working directory */
 
 #ifdef UW
-  /* a vnode to refer to the console device */
-  /* this is a quick-and-dirty way to get console writes working */
-  /* you will probably need to change this when implementing file-related
-     system calls, since each process will need to keep track of all files
-     it has opened, not just the console. */
-  struct vnode *console;                /* a vnode for the console device */
+   /* a vnode to refer to the console device */
+   /* this is a quick-and-dirty way to get console writes working */
+   /* you will probably need to change this when implementing file-related
+      system calls, since each process will need to keep track of all files
+      it has opened, not just the console. */
+   struct vnode *console;                /* a vnode for the console device */
 #endif
 
-	/* add more material here as needed */
+#if OPT_A2
+   pid_t pid; //each process has a pid
+   pid_t parent;
+   //pid_t *children_list;//the children array of this process
+   // int fork_or_not;//to determine whether the process produced from fork
+   //fork_or_not = 1  yes; fork_or_not = 0 no;
+#endif
+   /* add more material here as needed */
 };
 
 /* This is the process structure for the kernel and for kernel-only threads. */
@@ -99,6 +114,8 @@ struct addrspace *curproc_getas(void);
 
 /* Change the address space of the current process, and return the old one. */
 struct addrspace *curproc_setas(struct addrspace *);
-
+#if OPT_A2
+int assign_pid(struct proc *proc);
+#endif
 
 #endif /* _PROC_H_ */
